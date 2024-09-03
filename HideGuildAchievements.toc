@@ -1,0 +1,11 @@
+## Interface: 110002
+## Version: 1.2.0
+## IconTexture: Interface\ICONS\Pet_Type_Mechanical
+
+## Title: |cff00FF7F• HideGuildAchievements|r
+## Notes: Hides the annoying guild achievement spam.
+## Author: sampconrad
+
+## X-Category: Interface Enhancements
+
+HideGuildAchievements.lua
