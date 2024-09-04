@@ -10,13 +10,11 @@ local UnmuteSoundFile = _G.UnmuteSoundFile
 local AlertSystem = _G.AchievementAlertSystem
 local C_AchievementInfo = _G.C_AchievementInfo
 local GetAddOnMetadata = _G.C_AddOns.GetAddOnMetadata
+local ChatFrame_AddMessageEventFilter = _G.ChatFrame_AddMessageEventFilter
 
 -- Init
 local HideGuildAchievements = CreateFrame("Frame")
-
-HideGuildAchievements:RegisterEvent("PLAYER_ENTERING_WORLD")
 HideGuildAchievements:RegisterEvent("ACHIEVEMENT_EARNED")
-HideGuildAchievements:RegisterEvent("CHAT_MSG_GUILD_ACHIEVEMENT")
 
 local function FetchDataFromTOC()
   local dataRetuned = {}
@@ -35,12 +33,17 @@ end
 local METADATA = FetchDataFromTOC()
 
 local TITLE = METADATA["TITLE"] .. " |cffE37527v." .. METADATA["VERSION"] .. "|r"
-local GREET_MSG = TITLE .. "|r|cff909090 • Loaded.|r"
 local SPAM_MSG = TITLE .. "|r|cff909090 • Spam prevented!|r"
 
 -- Helper functions
-local function IsGuildAlertSpam(ID)
-  return ID and C_AchievementInfo.IsGuildAchievement(ID)
+local lastPrintTime = 0
+local function PrintSpamBlockedMsg()
+  local currentTime = GetTime()
+
+  if currentTime - lastPrintTime > 1 then
+    print(SPAM_MSG)
+    lastPrintTime = currentTime
+  end
 end
 
 local soundID = 569143
@@ -52,16 +55,16 @@ local function MuteAlertSound()
   end)
 end
 
--- To prevent spam prevention print messages
-local lastPrintTime = 0
-local function PrintSpamPrevented()
-  local currentTime = GetTime()
-
-  if currentTime - lastPrintTime > 1 then
-    print(SPAM_MSG)
-    lastPrintTime = currentTime
-  end
+local function IsGuildAlertSpam(ID)
+  return ID and C_AchievementInfo.IsGuildAchievement(ID)
 end
+
+local function FilterAchievementMsg()
+  return true
+end
+
+-- Filter achievement spam from chat
+ChatFrame_AddMessageEventFilter("CHAT_MSG_GUILD_ACHIEVEMENT", FilterAchievementMsg)
 
 -- Hook into the Blizz alert
 local AchievementAlertSystem_AddAlert = AlertSystem.AddAlert
@@ -77,20 +80,9 @@ AlertSystem.AddAlert = function(...)
 end
 
 -- On event Callback
-HideGuildAchievements:SetScript("OnEvent", function(_, event, ...)
-  if event == "PLAYER_ENTERING_WORLD" then
-    print(GREET_MSG)
-
-  elseif event == "ACHIEVEMENT_EARNED" then
-    local ID = ...
-
-    if IsGuildAlertSpam(ID) then
-      MuteAlertSound()
-      PrintSpamPrevented()
-    end
-
-  elseif event == "CHAT_MSG_GUILD_ACHIEVEMENT" then
-    return true -- stops msg from showing
+HideGuildAchievements:SetScript("OnEvent", function(_, _, ID)
+  if IsGuildAlertSpam(ID) then
+    MuteAlertSound()
+    PrintSpamBlockedMsg()
   end
-
 end)
